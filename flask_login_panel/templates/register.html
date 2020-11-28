@@ -231,6 +231,13 @@
                     verify_passed = false
                     return 0;
                 }
+                if (password !== confirm_password) {
+                    document.getElementById('err_u_o_p').style = "";
+                    document.getElementById('err_u_o_p').innerHTML = "两次密码不一致！";
+                    verify_obj.reset();
+                    verify_passed = false
+                    return 0;
+                }
                 let email_pattern = /^[A-Za-z0-9\u4e00-\u9fa5]+@[a-zA-Z0-9_-]+(\.[a-zA-Z0-9_-]+)+$/
                 if (email_pattern.test(email) === false) {
                     document.getElementById('err_u_o_p').style = "";

@@ -1,0 +1,12 @@
+{% extends "layout.html" %}
+
+{% block content %}
+
+    <div class="alert alert-success" role="alert" id="success_login">
+        <strong>登陆成功，即将跳转...</strong>
+    </div>
+    <script>
+        window.location.href = "{{ url_to }}";
+    </script>
+
+{% endblock %}

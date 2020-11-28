@@ -1,0 +1,189 @@
+{% extends "layout.html" %}
+
+{% block content %}
+    <script src="http://pv.sohu.com/cityjson?ie=utf-8" type="text/javascript"></script>
+    <script type="text/javascript">
+        let returnCitySN = {'cip': '0.0.0.0'};
+    </script>
+    <script src="https://v.vaptcha.com/v3.js" type="text/javascript"></script>
+    <link href="/static/content/signin.css" rel="stylesheet">
+    <style>
+        .vaptcha-init-main {
+            display: table;
+            width: 100%;
+            height: 100%;
+            background-color: #eeeeee;
+        }
+
+        .vaptcha-init-loading {
+            display: table-cell;
+            vertical-align: middle;
+            text-align: center;
+        }
+
+        .vaptcha-init-loading > a {
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            border: none;
+        }
+
+        .vaptcha-init-loading > a img {
+            vertical-align: middle;
+        }
+
+        .vaptcha-init-loading .vaptcha-text {
+            font-family: sans-serif;
+            font-size: 12px;
+            color: #cccccc;
+            vertical-align: middle;
+        }
+    </style>
+    <div class="alert alert-success" role="alert" id="success_login" style="display: none">
+        <strong>登陆成功！</strong>
+    </div>
+    <div class="alert alert-warning" role="alert" id="warn_adblock" style="display: none">
+        <strong>警告：</strong>系统检测到您正在使用浏览器的反广告插件（如AdBlock、uBlock等），这将会影响登录验证插件的运行，为了保证登录过程顺利，请为该网站添加白名单。
+    </div>
+    <div class="alert alert-danger" role="alert" id="err_verify" style="display: none">
+        <strong>请先通过人机交互验证！</strong>
+    </div>
+    <div class="alert alert-danger" role="alert" id="err_u_o_p" style="display: none"></div>
+    <div class="row">
+        <div class="text-center">
+            <img class="img-rounded" src="static/imgs/logo.png" alt="">
+        </div>
+    </div>
+    <div class="row">
+        <div class="container">
+            <form class="form-signin">
+                <h2 class="form-signin-heading">不做评论<small> 登录页面</small></h2>
+                <label for="username" class="sr-only">用户名</label>
+                <input type="text" id="username" class="form-control" placeholder="用户名" required
+                       autofocus>
+                <label for="password" class="sr-only">密码</label>
+                <input type="password" id="password" class="form-control" placeholder="密码" required>
+                <!-- 点击式按钮建议高度介于36px与46px  -->
+                <div id="vaptchaContainer" style="width: 300px;height: 36px;">
+                    <!--vaptcha-container是用来引入VAPTCHA的容器，下面代码为预加载动画，仅供参考-->
+                    <div class="vaptcha-init-main">
+                        <div class="vaptcha-init-loading">
+                            <a href="/" target="_blank">
+                                <img src="https://r.vaptcha.net/public/img/vaptcha-loading.gif"/>
+                            </a>
+                            <span class="vaptcha-text">正在加载验证组件...</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="checkbox">
+                    <label>
+                        <input type="checkbox" checked="" id="remember_me"> 记住登录状态
+                    </label>
+                </div>
+                <button type="button" class="btn btn-lg btn-primary btn-block" id="login_button">登录</button>
+                <div class="row">
+                    <div class="col-md-6 col-lg-6 col-xs-6 col-sm-6">
+                        <button type="button" class="btn btn-default btn-block" id="reg">注册</button>
+                    </div>
+                    <div class="col-md-6 col-lg-6 col-xs-6 col-sm-6">
+                        <button type="button" class="btn btn-default btn-block" id="forget_pass">忘记密码</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div> <!-- /container -->
+    <script src="https://v.vaptcha.com/v3.js" type="text/javascript"></script>
+    <script type="text/javascript">
+        if (returnCitySN['cip'] === '0.0.0.0') {
+            document.getElementById('warn_adblock').style = "";
+        }
+        let verify_passed = false
+        vaptcha({
+            vid: "5f11cf308d41fe366eb1e82a",
+            type: "click",
+            scene: 1,
+            container: "#vaptchaContainer",
+            offline_server: "",
+            lang: 'auto',
+            https: true,
+            color: '#000cff'
+        }).then(function (vaptchaObj) {
+            verify_obj = vaptchaObj;
+            vaptchaObj.render();
+            vaptchaObj.listen("pass", function () {
+                //验证通过
+                verify_passed = true
+            });
+            vaptchaObj.listen("close", function () {
+                vaptchaObj.reset()
+                verify_passed = false
+            });
+        });
+        $('#login_button').click(
+            function do_login() {
+                let token = verify_obj.getToken()
+                let username = document.getElementById('username').value
+                let password = document.getElementById('password').value
+                if ((username === "") || (password === "")) {
+                    document.getElementById('err_u_o_p').style = "";
+                    document.getElementById('err_u_o_p').innerHTML = "请输入用户名和密码！";
+                    verify_obj.reset();
+                    verify_passed = false
+                    return 0;
+                }
+                u_pattern = /^[a-zA-Z0-9_-]{2,16}$/
+                if (u_pattern.test(username) === false) {
+                    document.getElementById('err_u_o_p').style = "";
+                    document.getElementById('err_u_o_p').innerHTML = "用户名不合法！";
+                    verify_obj.reset();
+                    verify_passed = false
+                    return 0;
+                }
+                if (!((verify_passed) && (token !== ''))) {
+                    document.getElementById('err_verify').style = "";
+                    verify_obj.reset();
+                    verify_passed = false
+                    return 0;
+                }
+                document.getElementById('login_button').className = "btn btn-lg btn-primary btn-block disabled";
+                document.getElementById('login_button').innerText = "请稍后..."
+                let data = {
+                    username: username,
+                    password: password,
+                    token: token,
+                    ip: returnCitySN["cip"],
+                    remember_me: document.getElementById('remember_me').checked,
+                };
+                $.post("do_login", data, function (r) {
+                    if (r.code !== 200) {
+                        document.getElementById('err_u_o_p').style = "";
+                        document.getElementById('err_u_o_p').innerHTML = r.msg;
+                        verify_obj.reset();
+                        verify_passed = false
+                        document.getElementById('login_button').className = "btn btn-lg btn-primary btn-block";
+                        document.getElementById('login_button').innerText = "再次登录"
+                    } else {
+                        document.getElementById('success_login').style = "";
+                        window.location.href = "{{ url_to }}";
+                    }
+                });
+            }
+        );
+        $('#reg').click(
+            function f() {
+                window.location.href = "/register";
+            }
+        );
+        $('#forget_pass').click(
+            function f() {
+                window.location.href = "/forget_pass";
+            }
+        );
+        $(document).keydown(function (event) {
+            if (event.keyCode === 13) {
+                $('#login_button').click()
+            }
+        });
+
+    </script>
+{% endblock %}

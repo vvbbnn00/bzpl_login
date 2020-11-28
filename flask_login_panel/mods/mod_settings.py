@@ -24,6 +24,8 @@ def setting_init():
         conf.add_section("Mysql")
     if not conf.has_section("Email"):
         conf.add_section("Email")
+    if not conf.has_section("Vaptcha"):
+        conf.add_section("Vaptcha")
 
     if not conf.has_option("Mysql", "Mysql_host"):
         conf.set("Mysql", "Mysql_host", "localhost")
@@ -80,6 +82,13 @@ def setting_init():
     else:
         Email_port = conf.get("Email", "Email_port")
     set_value("Email_port", Email_port, local=True)
+
+    if not conf.has_option("Vaptcha", "secret_key"):
+        conf.set("Vaptcha", "secret_key", "")
+        secret_key = ""
+    else:
+        secret_key = conf.get("Vaptcha", "secret_key")
+    set_value("secret_key", secret_key, local=True)
     conf.write(open(cfg, 'w'))
     return 0
 

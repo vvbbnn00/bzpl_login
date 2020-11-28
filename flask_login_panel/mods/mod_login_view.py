@@ -7,6 +7,7 @@ from flask import *
 from flask_login_panel import app
 from flask_login_panel.mods import mod_safety
 from flask_login_panel.mods import mod_mysql
+from flask_login_panel.mods import mod_settings
 import requests
 import re
 
@@ -77,7 +78,7 @@ def check_user():
     ip = request.form['ip']
     v_data = {
         'id': '5f11cf308d41fe366eb1e82a',
-        'secretkey': '99f01c002fbf433494a6e2b74a52c8e3',
+        'secretkey': f'{mod_settings.get_value("secret_key")}',
         'scene': 1,
         'token': v_token,
         'ip': ip

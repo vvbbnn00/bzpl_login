@@ -117,13 +117,14 @@
                     <p>2020年11月22日</p>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-primary" data-dismiss="modal">我已知悉</button>
+                    <button type="button" class="btn btn-success" data-dismiss="modal" id="i_agree">我已知悉，而且同意</button>
+                    <button type="button" class="btn btn-danger" data-dismiss="modal" id="i_reject">但是，我拒绝</button>
                 </div>
             </div><!-- /.modal-content -->
         </div><!-- /.modal -->
     </div>
-    <div class="alert alert-success" role="alert" id="success_login" style="display: none">
-        <strong>注册成功！</strong>
+    <div class="alert alert-success" role="alert" id="success_reg" style="display: none">
+        <strong>注册成功，一封激活邮件已发送至您的邮箱，为避免重复注册，请在一小时内激活！</strong>
     </div>
     <div class="alert alert-warning" role="alert" id="warn_adblock" style="display: none">
         <strong>警告：</strong>系统检测到您正在使用浏览器的反广告插件（如AdBlock、uBlock等），这将会影响登录验证插件的运行，为了保证登录过程顺利，请为该网站添加白名单。
@@ -147,7 +148,7 @@
                 <p class="text-info">用户名要求：长度2-16位，由数字、大小写英文字母和_与-组成。</p>
                 <label for="password" class="sr-only">密码</label>
                 <input type="password" id="password" class="form-control" placeholder="密码" required>
-                <p class="text-info">密码强度建议：长度6-32位，至少有1个英文字母或字符。</p>
+                <p class="text-info">密码强度建议：长度6-20位，包含数字，英文，字符中的两种以上。</p>
                 <label for="confirm_password" class="sr-only">确认密码</label>
                 <input type="password" id="confirm_password" class="form-control" placeholder="确认密码" required>
                 <label for="email" class="sr-only">电子邮箱</label>
@@ -165,19 +166,14 @@
                         </div>
                     </div>
                 </div>
-                <button type="button" class="btn btn-lg btn-primary btn-block" id="login_button">注册</button>
-                <div class="row">
-                    <div class="col-md-12 col-lg-12 col-xs-12 col-sm-12">
-                        <a role="button" class="btn btn-default btn-block" href="/login" id="reg_button">登录</a>
-                    </div>
-                </div>
-                <button class="btn btn-primary btn-lg" data-toggle="modal" data-target="#privacy_policy">隐私政策
-                </button>
+                <button type="button" class="btn btn-lg btn-primary btn-block" id="reg_button">注册</button>
+                <button type="button" class="btn btn-default btn-block" id="goto_login_button">登录</button>
             </form>
         </div>
     </div> <!-- /container -->
     <script src="https://v.vaptcha.com/v3.js" type="text/javascript"></script>
     <script type="text/javascript">
+        let check_pass = false;
         if (returnCitySN['cip'] === '0.0.0.0') {
             document.getElementById('warn_adblock').style = "";
         }
@@ -203,22 +199,42 @@
                 verify_passed = false
             });
         });
-        $('#login_button').click(
+        let data = {}
+        $('#reg_button').click(
             function () {
                 let token = verify_obj.getToken()
                 let username = document.getElementById('username').value
                 let password = document.getElementById('password').value
-                if ((username === "") || (password === "")) {
+                let confirm_password = document.getElementById('confirm_password').value
+                let email = document.getElementById('email').value
+
+                if ((username === "") || (password === "") || (confirm_password === "") || (email === "") ) {
                     document.getElementById('err_u_o_p').style = "";
-                    document.getElementById('err_u_o_p').innerHTML = "请输入用户名和密码！";
+                    document.getElementById('err_u_o_p').innerHTML = "请完整填写注册表格！";
                     verify_obj.reset();
                     verify_passed = false
                     return 0;
                 }
-                u_pattern = /^[a-zA-Z0-9_-]{2,16}$/
-                if (u_pattern.test(username) === false) {
+                let user_pattern = /^[a-zA-Z0-9_-]{2,16}$/
+                if (user_pattern.test(username) === false) {
                     document.getElementById('err_u_o_p').style = "";
                     document.getElementById('err_u_o_p').innerHTML = "用户名不合法！";
+                    verify_obj.reset();
+                    verify_passed = false
+                    return 0;
+                }
+                let pass_pattern = /^(?![0-9]+$)(?![a-z]+$)(?![A-Z]+$)(?!([^(0-9a-zA-Z)])+$).{6,20}$/
+                if (pass_pattern.test(password) === false) {
+                    document.getElementById('err_u_o_p').style = "";
+                    document.getElementById('err_u_o_p').innerHTML = "密码过弱！";
+                    verify_obj.reset();
+                    verify_passed = false
+                    return 0;
+                }
+                let email_pattern = /^[A-Za-z0-9\u4e00-\u9fa5]+@[a-zA-Z0-9_-]+(\.[a-zA-Z0-9_-]+)+$/
+                if (email_pattern.test(email) === false) {
+                    document.getElementById('err_u_o_p').style = "";
+                    document.getElementById('err_u_o_p').innerHTML = "电子邮箱不正确！";
                     verify_obj.reset();
                     verify_passed = false
                     return 0;
@@ -229,30 +245,50 @@
                     verify_passed = false
                     return 0;
                 }
-                document.getElementById('login_button').className = "btn btn-lg btn-primary btn-block disabled";
-                document.getElementById('login_button').innerText = "请稍后..."
-                let data = {
+                check_pass = true
+                data = {
                     username: username,
                     password: password,
+                    email: email,
                     token: token,
                     ip: returnCitySN["cip"],
-                    remember_me: document.getElementById('remember_me').checked,
                 };
-                $.post("do_login", data, function (r) {
+                $('#privacy_policy').modal('show');
+            }
+        );
+        $('#i_agree').click(
+            function (){
+                if (!check_pass){
+                    alert('Damedane dameyo damenanoyo~');
+                    return -1;
+                }
+                document.getElementById('reg_button').className = "btn btn-lg btn-primary btn-block disabled";
+                document.getElementById('reg_button').innerText = "请稍后..."
+
+                $.post("do_reg", data, function (r) {
                     if (r.code !== 200) {
                         document.getElementById('err_u_o_p').style = "";
                         document.getElementById('err_u_o_p').innerHTML = r.msg;
                         verify_obj.reset();
                         verify_passed = false
-                        document.getElementById('login_button').className = "btn btn-lg btn-primary btn-block";
-                        document.getElementById('login_button').innerText = "再次登录"
+                        document.getElementById('reg_button').className = "btn btn-lg btn-primary btn-block";
+                        document.getElementById('reg_button').innerText = "注册"
                     } else {
-                        document.getElementById('success_login').style = "";
-                        window.location.href = "{{ url_to }}";
+                        document.getElementById('success_reg').style = "";
                     }
                 });
             }
         );
-
+        $('#i_reject').click(
+            function (){
+                document.getElementById('err_u_o_p').style = "";
+                document.getElementById('err_u_o_p').innerHTML = "您拒绝了隐私政策，注册中断。";
+            }
+        )
+        $('#goto_login_button').click(
+            function (){
+                window.location.href="/login"
+            }
+        )
     </script>
 {% endblock %}

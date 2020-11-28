@@ -4,8 +4,16 @@ from binascii import b2a_hex, a2b_hex
 from Crypto.Cipher import AES
 
 
-def randomSecretKey(num):
+def random_secret_key(num):
     H = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+='
+    salt = ''
+    for i in range(num):
+        salt += random.choice(H)
+    return salt
+
+
+def random_number_code(num):
+    H = '0123456789'
     salt = ''
     for i in range(num):
         salt += random.choice(H)

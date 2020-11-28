@@ -14,14 +14,16 @@ def _init():
 
 
 def setting_init():
-    mysql_cfg = "./flask_login_panel/settings/mysql.ini"
+    cfg = "./flask_login_panel/settings/mysql.ini"
     conf = configparser.ConfigParser()
-    if not os.path.exists(mysql_cfg):
-        f = open(mysql_cfg, 'wb')
+    if not os.path.exists(cfg):
+        f = open(cfg, 'wb')
         f.close()
-    conf.read(mysql_cfg)
+    conf.read(cfg)
     if not conf.has_section("Mysql"):
         conf.add_section("Mysql")
+    if not conf.has_section("Email"):
+        conf.add_section("Email")
 
     if not conf.has_option("Mysql", "Mysql_host"):
         conf.set("Mysql", "Mysql_host", "localhost")
@@ -29,33 +31,56 @@ def setting_init():
     else:
         Mysql_host = conf.get("Mysql", "Mysql_host")
     set_value("Mysql_host", Mysql_host, local=True)
+
     if not conf.has_option("Mysql", "Mysql_user"):
         conf.set("Mysql", "Mysql_user", "root")
         Mysql_user = "root"
     else:
         Mysql_user = conf.get("Mysql", "Mysql_user")
     set_value("Mysql_user", Mysql_user, local=True)
+
     if not conf.has_option("Mysql", "Mysql_pass"):
         conf.set("Mysql", "Mysql_pass", "root")
         Mysql_pass = "root"
     else:
         Mysql_pass = conf.get("Mysql", "Mysql_pass")
     set_value("Mysql_pass", Mysql_pass, local=True)
-    if not conf.has_option("Mysql", "Mysql_db"):
-        conf.set("Mysql", "Mysql_db", "db_vsctlr")
-        Mysql_db = "db_vsctlr"
-    else:
-        Mysql_db = conf.get("Mysql", "Mysql_db")
-    set_value("Mysql_db", Mysql_db, local=True)
-    conf.write(open(mysql_cfg, 'w'))
 
-    result = 0
-    result += set_value("Temp_Dir", "temp/")  # 临时文件目录（建议相对路径）
-    result += set_value("Log_Dir", "log/")  # 日志文件目录
-    result += set_value("db_connected", "false")  # 检验数据库是否连接成功
-    if result != 0:
-        print("错误！请检查您的mysql是否配置正确！")
-        return -1
+    if not conf.has_option("Mysql", "Mysql_pass"):
+        conf.set("Mysql", "Mysql_pass", "root")
+        Mysql_pass = "root"
+    else:
+        Mysql_pass = conf.get("Mysql", "Mysql_pass")
+    set_value("Mysql_pass", Mysql_pass, local=True)
+
+    if not conf.has_option("Email", "Email_host"):
+        conf.set("Email", "Email_host", "")
+        Email_host = ""
+    else:
+        Email_host = conf.get("Email", "Email_host")
+    set_value("Email_host", Email_host, local=True)
+
+    if not conf.has_option("Email", "Email_user"):
+        conf.set("Email", "Email_user", "")
+        Email_user = ""
+    else:
+        Email_user = conf.get("Email", "Email_user")
+    set_value("Email_user", Email_user, local=True)
+
+    if not conf.has_option("Email", "Email_pass"):
+        conf.set("Email", "Email_pass", "")
+        Email_pass = ""
+    else:
+        Email_pass = conf.get("Email", "Email_pass")
+    set_value("Email_pass", Email_pass, local=True)
+
+    if not conf.has_option("Email", "Email_port"):
+        conf.set("Email", "Email_port", "")
+        Email_port = ""
+    else:
+        Email_port = conf.get("Email", "Email_port")
+    set_value("Email_port", Email_port, local=True)
+    conf.write(open(cfg, 'w'))
     return 0
 
 
@@ -65,8 +90,7 @@ def set_value(name, value, change=False, local=False):
         _global_dict[name] = value
         return
     try:
-        db = MySQLdb.connect(_global_dict['Mysql_host'], _global_dict['Mysql_user'], _global_dict['Mysql_pass'],
-                             _global_dict['Mysql_db'], charset='utf8')
+        db = MySQLdb.connect(_global_dict['Mysql_host'], _global_dict['Mysql_user'], _global_dict['Mysql_pass'], charset='utf8')
         cursor = db.cursor()
         database = "SELECT * FROM db_vsctlr.VSCTLR_SETTINGS WHERE SettingName = '%s'" % (name)
         cursor.execute(database)
@@ -86,6 +110,9 @@ def set_value(name, value, change=False, local=False):
                 cursor.execute(database)
         db.close()
     except Exception as e:
+        print('发生错误的文件：', e.__traceback__.tb_frame.f_globals['__file__'])
+        print('错误所在的行号：', e.__traceback__.tb_lineno)
+        print('错误信息', e)
         return -1
     return 0
 

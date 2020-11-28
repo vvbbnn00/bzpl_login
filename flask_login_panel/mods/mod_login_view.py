@@ -90,10 +90,11 @@ def check_user():
             'code': 403,
             'msg': '服务器端二次验证失败，这可能是ADBlock或uBlock等去广告插件屏蔽IP检测插件导致的。建议：请在添加该网站为白名单后重试。'
         }
-    if mod_mysql.check_user(username, password) == -1:
+    result = mod_mysql.check_user(username, password, ip)
+    if result['code'] != 0:
         return {
-            'code': 403,
-            'msg': '用户名或密码错误！'
+            'code': result['code'],
+            'msg': result['msg']
         }
     else:
         token = "Login:" + username + "PPpp" + password
@@ -152,3 +153,8 @@ def register():
         year=datetime.now().year,
         url_to=url_to,
     )
+
+
+@app.route('/test/sendmail')
+def test_send_mail():
+    return mod_mysql.create_verify_link("test", "1", "vvbbnn00@foxmail.com")

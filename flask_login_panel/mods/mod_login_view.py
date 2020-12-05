@@ -9,7 +9,6 @@ from flask_login_panel.mods import mod_safety
 from flask_login_panel.mods import mod_mysql
 from flask_login_panel.mods import mod_settings
 import requests
-import re
 
 
 @app.route('/login')
@@ -217,3 +216,11 @@ def do_active():
                                title='账户激活',
                                year=datetime.now().year,
                                )
+
+
+@app.route('/forget_pass')
+def forget_pass():
+    # todo 暂不准备完成
+    return "暂不开放，请联系管理员"
+    # return render_template("forget_pass.html")
+

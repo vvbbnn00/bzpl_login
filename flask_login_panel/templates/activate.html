@@ -1,0 +1,15 @@
+{% extends "layout.html" %}
+
+{% block content %}
+
+    <div class="alert alert-success" role="alert" id="success_activate" style="{{ success }}">
+        <strong>账户激活成功，您现在可以登录了！</strong>
+    </div>
+    <div class="alert alert-danger" role="alert" id="success_activate" style="{{ failed }}">
+        <strong>{{ fail_msg }}</strong>
+    </div>
+    <script>
+        {{ enable_url }}window.location.href = "{{ url_to }}";
+    </script>
+
+{% endblock %}

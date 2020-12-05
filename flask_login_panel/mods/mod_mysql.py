@@ -121,11 +121,12 @@ def create_verify_link(username, uid, email):
                 'code': 1,
                 'msg': "非法请求！"
             }
-        token_id = datetime.datetime.now().strftime("%Y%m%d%H%M%S_" + uid + mod_safety.random_number_code(10))
+        token_id = datetime.datetime.now().strftime("%Y%m%d%H%M%S_" + str(uid) + str(mod_safety.random_number_code(10)))
         token = mod_safety.pass_hash(mod_safety.random_secret_key(32))
         r = redis.Redis(connection_pool=pool)
         r.set("v_code_" + token_id, token, ex=3600)
-        r.set("v_uid_" + token_id, token, ex=3600)
+        r.set("v_uid_" + token_id, uid, ex=3600)
+        r.set("is_activating_" + username, "true", ex=3600)
         mod_email.send_verify_message(username, email, token_id, token)
         return {
             'code': 0,
@@ -144,8 +145,8 @@ def create_verify_link(username, uid, email):
 def verify_link(token_id, token):
     try:
         r = redis.Redis(connection_pool=pool)
-        check_code = r.get("v_code_" + token_id) == token_id
-        uid = r.set("v_uid_" + token_id, token)
+        check_code = r.get("v_code_" + token_id) == token
+        uid = r.get("v_uid_" + token_id)
         if check_code is False or uid is None:
             return {
                 'code': 1,
@@ -157,10 +158,66 @@ def verify_link(token_id, token):
         cursor = db.cursor()
         sql = f"REPLACE INTO db_user.user_detail (`uid`, `Status`) VALUES ('{uid}', '{0}')"
         cursor.execute(sql)
+        sql = f"SELECT * FROM db_user.user_up WHERE uid='{ uid }'"
+        cursor.execute(sql)
+        result = cursor.fetchone()
+        username = result['2']
+        r.delete("is_activating_" + username)
         return {
             'code': 0,
             'msg': '账户激活成功，请重新登录！'
         }
+    except Exception as e:
+        print('发生错误的文件：', e.__traceback__.tb_frame.f_globals['__file__'])
+        print('错误所在的行号：', e.__traceback__.tb_lineno)
+        print('错误信息', e)
+        return {
+            'code': -1,
+            'msg': "未知错误，请联系管理员！"
+        }
+
+
+def create_user(username, pass_hash, email):
+    try:
+        db = MySQLdb.connect(Mysql_host, Mysql_user, Mysql_pass, charset='utf8')
+        cursor = db.cursor()
+        sql = f"SELECT * FROM db_user.user_up WHERE USERNAME = '{username}'"
+        cursor.execute(sql)
+        result = cursor.fetchall()
+        # 确保用户名不重复
+        if result is not None:
+            uid = result[0]
+            r = redis.Redis(connection_pool=pool)
+            is_occupied = r.get("is_activating_" + username) == "true"
+            if is_occupied:
+                return {
+                    'code': 1,
+                    'msg': '用户名已被占用。'
+                }
+            for item in result:
+                uid = item[0]
+                sql = f"SELECT * FROM db_user.user_detail WHERE UID = '{uid}'"
+                cursor.execute(sql)
+                result_d = cursor.fetchone()
+                if result_d[5] != 2:
+                    return {
+                        'code': 1,
+                        'msg': '用户名已被占用。'
+                    }
+                else:
+                    sql = f"DELETE FROM db_user.user_detail WHERE UID = '{uid}';" \
+                          f"DELETE FROM db_user.user_up WHERE UID = '{uid}';"
+                    cursor.execute(sql)
+        # 开始注册
+        sql = f"SELECT auto_increment FROM information_schema.`TABLES` WHERE table_name = 'user_up';"
+        cursor.execute(sql)
+        result = cursor.fetchone()
+        uid = result[0]
+        sql = f"INSERT INTO db_user.user_up (`USERNAME`, `PASS`) VALUES ('{username}', '{pass_hash}');" \
+              f"INSERT INTO db_user.user_detail (`uid`, `Email`, `Status`) VALUES ('{uid}', '{email}', '{2}');"
+        cursor.execute(sql)
+        result = create_verify_link(username, uid, email)
+        return result
     except Exception as e:
         print('发生错误的文件：', e.__traceback__.tb_frame.f_globals['__file__'])
         print('错误所在的行号：', e.__traceback__.tb_lineno)

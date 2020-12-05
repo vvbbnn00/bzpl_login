@@ -18,15 +18,7 @@ def login():
     username = request.cookies.get('user')
     token = request.cookies.get('token')
     u_pattern = "^[a-zA-Z0-9_-]{2,16}$"
-    if username is None:
-        username_check = False
-    else:
-        if len(username) in range(2, 17):
-            username_check = ('' if re.search(u_pattern, username) is None else re.search(u_pattern, username)
-                              .group()) == username
-        else:
-            username_check = False
-    if username_check:
+    if mod_safety.check_pattern(u_pattern, username):
         result = mod_mysql.check_token(username, token)
     else:
         result = -1
@@ -61,12 +53,7 @@ def login_status():
 def check_user():
     username = request.form['username']
     u_pattern = "^[a-zA-Z0-9_-]{2,16}$"
-    if len(username) in range(2, 17):
-        username_check = ('' if re.search(u_pattern, username) is None else re.search(u_pattern, username)
-                          .group()) == username
-    else:
-        username_check = False
-    if not username_check:
+    if not mod_safety.check_pattern(u_pattern, username):
         return {
             'code': 403,
             'msg': '用户名请求不合法！'
@@ -134,15 +121,7 @@ def register():
     username = request.cookies.get('user')
     token = request.cookies.get('token')
     u_pattern = "^[a-zA-Z0-9_-]{2,16}$"
-    if username is None:
-        username_check = False
-    else:
-        if len(username) in range(2, 17):
-            username_check = ('' if re.search(u_pattern, username) is None else re.search(u_pattern, username)
-                              .group()) == username
-        else:
-            username_check = False
-    if username_check:
+    if mod_safety.check_pattern(u_pattern, username):
         result = mod_mysql.check_token(username, token)
     else:
         result = -1
@@ -159,3 +138,82 @@ def register():
 @app.route('/test/sendmail')
 def test_send_mail():
     return mod_mysql.create_verify_link("test", "1", "vvbbnn00@foxmail.com")
+
+
+@app.route('/do_reg', methods=['POST'])
+def do_reg():
+    username = request.form['username']
+    ori_passwd = request.form['password']
+    passwd = mod_safety.pass_hash(ori_passwd)
+    email = request.form['email']
+    v_token = request.form['token']
+    ip = request.form['ip']
+    u_pattern = "^[a-zA-Z0-9_-]{2,16}$"
+    p_pattern = "^(?![0-9]+$)(?![a-z]+$)(?![A-Z]+$)(?!([^(0-9a-zA-Z)])+$).{6,20}$"
+    e_pattern = "^[A-Za-z0-9\u4e00-\u9fa5]+@[a-zA-Z0-9_-]+(\.[a-zA-Z0-9_-]+)+$"
+    if not mod_safety.check_pattern(u_pattern, username) or not mod_safety.check_pattern(p_pattern, ori_passwd) or not \
+            mod_safety.check_pattern(e_pattern, email):
+        return {
+            'code': 403,
+            'msg': "请求不合法！"
+        }
+    v_data = {
+        'id': '5f11cf308d41fe366eb1e82a',
+        'secretkey': f'{mod_settings.get_value("secret_key")}',
+        'scene': 2,
+        'token': v_token,
+        'ip': ip
+    }
+    print(f'[注册尝试] {datetime.now().strftime("%Y-%m-%d %H:%M:%S")} 来自ip:{ip} 的用户尝试以用户名 {username} 注册 密码hash：'
+          f'{passwd} 电子邮箱 {email}。')
+    v_response = requests.post("http://0.vaptcha.com/verify", v_data).json()
+    if v_response['success'] != 1:
+        return {
+            'code': 403,
+            'msg': '服务器端二次验证失败，这可能是ADBlock或uBlock等去广告插件屏蔽IP检测插件导致的。建议：请在添加该网站为白名单后重试。'
+        }
+    result = mod_mysql.create_user(username=username, pass_hash=passwd, email=email)
+    if result['code'] == 0:
+        return {
+            'code': 200,
+            'msg': "success."
+        }
+    else:
+        return {
+            'code': 403,
+            'msg': result['msg']
+        }
+
+
+@app.route('/activate')
+def do_active():
+    token_id = request.args.get('token_id', "")
+    token = request.args.get('token', "")
+    if token == "" or token_id == "":
+        return render_template("activate.html",
+                               success="display:none",
+                               failed="",
+                               fail_msg="请求不合法！",
+                               enable_url="//",
+                               title='账户激活',
+                               year=datetime.now().year,
+                               )
+    result = mod_mysql.verify_link(token_id, token)
+    if result['code'] == 0:
+        return render_template("activate.html",
+                               success="",
+                               failed="display:none",
+                               enable_url="",
+                               url_to="/login",
+                               title='账户激活',
+                               year=datetime.now().year,
+                               )
+    else:
+        return render_template("activate.html",
+                               success="display:none",
+                               failed="",
+                               fail_msg=result['msg'],
+                               enable_url="//",
+                               title='账户激活',
+                               year=datetime.now().year,
+                               )

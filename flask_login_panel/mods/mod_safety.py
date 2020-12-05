@@ -2,6 +2,7 @@ import hashlib
 import random
 from binascii import b2a_hex, a2b_hex
 from Crypto.Cipher import AES
+import re
 
 
 def random_secret_key(num):
@@ -75,3 +76,10 @@ def aes_decrypt(text, private_key):
         return bytes.decode(plain_text).rstrip('\0')
     except:
         return text
+
+
+def check_pattern(pattern, string):
+    if string is None or pattern is None:
+        return False
+    result = re.search(pattern, string)
+    return ("" if result is None else result.group()) == string
